@@ -89,6 +89,13 @@ def _index_existing_manifest(manifest: dict | None) -> dict[str, dict[str, dict]
     return indexed
 
 
+def _filter_manifest_layers(manifest: dict | None, layers: set[str] | None) -> dict | None:
+    if not manifest or layers is None:
+        return manifest
+    filtered_layers = [layer for layer in manifest.get("layers", []) if layer.get("name") in layers]
+    return {"generated_at": manifest.get("generated_at"), "layers": filtered_layers}
+
+
 def _iter_layer_dirs(input_dir: Path, layers: set[str] | None) -> Iterable[Path]:
     for entry in sorted(input_dir.iterdir()):
         if not entry.is_dir():
@@ -136,14 +143,15 @@ def _stack_images(paths: list[Path], base_path: Path | None = None) -> tuple[Ima
     for path in paths:
         with pil.open(path) as img:
             frame = img.convert("RGBA")
-        if base is None:
-            base = frame
-            base_chroma = _compute_chroma(chops, base)
-            output = base.copy()
-            used_count = 1
-            continue
-        if frame.size != base.size:
+        if output is None:
+            output = frame.copy()
+        if frame.size != output.size:
             raise ValueError(f"Mismatched tile sizes while stacking: {path}")
+        if base_chroma is None:
+            base_chroma = _compute_chroma(chops, frame)
+            output = pil.alpha_composite(output, frame)
+            used_count += 1
+            continue
         frame_chroma = _compute_chroma(chops, frame)
         diff = chops.subtract(frame_chroma, base_chroma)
         mask = diff.point(lambda value: 255 if value > 18 else 0)
@@ -160,7 +168,7 @@ def build_day_stacks(
     layers: set[str] | None = None,
 ) -> dict:
     tiles = collect_day_tiles(input_dir, layers=layers)
-    existing_manifest = _load_existing_manifest(output_dir)
+    existing_manifest = _filter_manifest_layers(_load_existing_manifest(output_dir), layers)
     existing_index = _index_existing_manifest(existing_manifest)
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = {

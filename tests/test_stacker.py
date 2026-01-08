@@ -72,3 +72,22 @@ def test_parse_helpers() -> None:
     assert _parse_time_dir("nope") is None
     assert _parse_tile_index("tile_2_0_0_1_1.png") == 2
     assert _parse_tile_index("tile_no_index.png") is None
+
+
+def test_build_day_stacks_filters_manifest_layers(tmp_path: Path) -> None:
+    output_dir = tmp_path / "daily"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "generated_at": "2025-01-02T00:00:00Z",
+        "layers": [
+            {"name": "prectype", "days": []},
+            {"name": "other", "days": []},
+        ],
+    }
+    write_manifest(output_dir / "manifest.json", manifest)
+
+    input_dir = tmp_path / "data"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    filtered = build_day_stacks(input_dir, output_dir, layers={"prectype"})
+
+    assert [layer["name"] for layer in filtered["layers"]] == ["prectype"]
