@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run dmi_radar_history (module)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "dmi_radar_history",
+      "args": [
+        "--output-dir",
+        "data",
+        "--max-age-hours",
+        "6"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Run dmi_radar_history (dry-run)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "dmi_radar_history",
+      "args": [
+        "--dry-run",
+        "--verbose",
+        "--output-dir",
+        "data",
+        "--max-age-hours",
+        "6"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
