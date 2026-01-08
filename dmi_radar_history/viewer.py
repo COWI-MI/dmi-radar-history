@@ -9,8 +9,14 @@ def load_manifest(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def render_viewer_html(manifest: dict, title: str = "Daily Precipitation Stack") -> str:
+def render_viewer_html(
+    manifest: dict,
+    title: str = "Daily Precipitation Stack",
+    tile_base_path: str = "",
+) -> str:
     manifest_json = json.dumps(manifest)
+    tile_base = tile_base_path.rstrip("/") + "/" if tile_base_path else ""
+    tile_base_json = json.dumps(tile_base)
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -220,6 +226,7 @@ def render_viewer_html(manifest: dict, title: str = "Daily Precipitation Stack")
     </main>
     <script>
       const manifest = {manifest_json};
+      const tileBasePath = {tile_base_json};
       const layerSelect = document.getElementById("layerSelect");
       const daySelect = document.getElementById("daySelect");
       const tilesEl = document.getElementById("tiles");
@@ -269,7 +276,7 @@ def render_viewer_html(manifest: dict, title: str = "Daily Precipitation Stack")
           const card = document.createElement("div");
           card.className = "tile-card";
           const img = document.createElement("img");
-          img.src = tile.path;
+          img.src = `${{tileBasePath}}${{tile.path}}`;
           img.alt = `Tile ${{tile.index}}`;
           const caption = document.createElement("div");
           caption.className = "tile-caption";
@@ -322,10 +329,18 @@ def render_viewer_html(manifest: dict, title: str = "Daily Precipitation Stack")
 """
 
 
-def write_viewer(output_dir: Path, manifest: dict, title: str = "Daily Precipitation Stack") -> Path:
+def write_viewer(
+    output_dir: Path,
+    manifest: dict,
+    title: str = "Daily Precipitation Stack",
+    tile_base_path: str = "",
+) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "index.html"
-    path.write_text(render_viewer_html(manifest, title=title), encoding="utf-8")
+    path.write_text(
+        render_viewer_html(manifest, title=title, tile_base_path=tile_base_path),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -335,13 +350,14 @@ def main() -> int:
     parser.add_argument("--manifest", default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--title", default="Daily Precipitation Stack")
+    parser.add_argument("--tile-base-path", default="")
     args = parser.parse_args()
 
     stacked_dir = Path(args.stacked_dir)
     manifest_path = Path(args.manifest) if args.manifest else stacked_dir / "manifest.json"
     output_dir = Path(args.output_dir) if args.output_dir else stacked_dir
     manifest = load_manifest(manifest_path)
-    write_viewer(output_dir, manifest, title=args.title)
+    write_viewer(output_dir, manifest, title=args.title, tile_base_path=args.tile_base_path)
     return 0
 
 

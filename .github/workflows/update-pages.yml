@@ -48,7 +48,7 @@ jobs:
         run: python -m dmi_radar_history.stacker --input-dir data --output-dir site/daily
 
       - name: Build viewer
-        run: python -m dmi_radar_history.viewer --stacked-dir site/daily --output-dir site --title "DMI Radar Daily Stack"
+        run: python -m dmi_radar_history.viewer --stacked-dir site/daily --output-dir site --title "DMI Radar Daily Stack" --tile-base-path "daily/"
 
       - name: Prepare Pages artifact
         run: rm -f site/.git
