@@ -11,16 +11,18 @@ Utilities for downloading historical radar tiles from the Danish Meteorological 
 ## Requirements
 
 - Python 3.10+
-- No third-party runtime dependencies
+- Pillow (required for stacking/viewer features)
 
 ## Quickstart
 
 ```bash
-python -m dmi_radar_history --output-dir data --max-age-hours 6
+python -m dmi_radar_history.downloader --output-dir data --max-age-hours 6
 ```
 
 The command above will fetch the most recent tiles (up to six hours old) and store them under `data/`.
 A `state.json` file is created in the same directory to track the latest saved timestamps per layer.
+
+You can also use `python -m dmi_radar_history` as a shortcut to the downloader.
 
 ### Common options
 
@@ -46,12 +48,28 @@ Create a JSON file when you want to control the tile size, the resolution, or su
 When both `resolution` and `bboxes` are omitted, a single tile is generated for each layer using the
 Denmark extent for EPSG:3575 layers (falling back to the layer bounding box when it doesn't cover Denmark).
 
+## Daily stack + viewer
+
+Stack a day's worth of frames into a single composite per tile:
+
+```bash
+python -m dmi_radar_history.stacker --input-dir data --output-dir daily
+```
+
+Generate a static HTML viewer for the stacked output:
+
+```bash
+python -m dmi_radar_history.viewer --stacked-dir daily
+```
+
+Open `daily/index.html` to browse per-day composites.
+
 ## Development
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip pytest
+python -m pip install --upgrade pip pytest pillow
 pytest
 ```
 
