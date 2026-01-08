@@ -10,12 +10,15 @@ class TestWmsCapabilities(unittest.TestCase):
         xml_text = Path("tests/fixtures/capabilities.xml").read_text(encoding="utf-8")
         layers = parse_capabilities(xml_text)
         names = {layer.name for layer in layers}
-        self.assertEqual(names, {"prectype", "reflectivity"})
+        self.assertEqual(names, {"prectype", "reflectivity", "daily"})
         prectype = next(layer for layer in layers if layer.name == "prectype")
         self.assertEqual(len(prectype.times), 2)
         self.assertEqual(prectype.bbox.crs, "EPSG:3575")
         reflectivity = next(layer for layer in layers if layer.name == "reflectivity")
         self.assertEqual(len(reflectivity.times), 3)
+        daily = next(layer for layer in layers if layer.name == "daily")
+        self.assertEqual(len(daily.times), 3)
+        self.assertEqual(daily.times[0].date().isoformat(), "2025-01-01")
 
     def test_build_getmap_url(self) -> None:
         xml_text = Path("tests/fixtures/capabilities.xml").read_text(encoding="utf-8")

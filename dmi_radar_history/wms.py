@@ -45,7 +45,7 @@ def _parse_time_value(value: str) -> list[dt.datetime]:
     value = value.strip()
     if not value:
         return []
-    if "/" in value and "PT" in value:
+    if "/" in value:
         parts = value.split("/")
         if len(parts) == 3:
             start = _parse_time(parts[0])
@@ -79,24 +79,43 @@ def _parse_time(value: str) -> dt.datetime:
 
 
 def _parse_duration(value: str) -> dt.timedelta | None:
-    if not value.startswith("PT"):
+    if not value.startswith("P"):
         return None
-    hours = minutes = seconds = 0
-    number = ""
-    for char in value[2:]:
-        if char.isdigit():
-            number += char
-            continue
-        if not number:
-            continue
-        if char == "H":
-            hours = int(number)
-        elif char == "M":
-            minutes = int(number)
-        elif char == "S":
-            seconds = int(number)
+    date_part = value[1:]
+    time_part = ""
+    if "T" in date_part:
+        date_part, time_part = date_part.split("T", 1)
+
+    def parse_segment(segment: str, designator: str) -> int:
+        if designator not in segment:
+            return 0
         number = ""
-    return dt.timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        for char in segment:
+            if char.isdigit():
+                number += char
+            elif char == designator:
+                break
+            else:
+                number = ""
+        return int(number) if number else 0
+
+    years = parse_segment(date_part, "Y")
+    months = parse_segment(date_part, "M")
+    weeks = parse_segment(date_part, "W")
+    days = parse_segment(date_part, "D")
+    hours = parse_segment(time_part, "H")
+    minutes = parse_segment(time_part, "M")
+    seconds = parse_segment(time_part, "S")
+
+    if years or months:
+        return None
+    total_days = days + weeks * 7
+    return dt.timedelta(
+        days=total_days,
+        hours=hours,
+        minutes=minutes,
+        seconds=seconds,
+    )
 
 
 def fetch_capabilities(url: str, timeout: float = 20.0) -> str:

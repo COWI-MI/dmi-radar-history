@@ -15,6 +15,12 @@
         <Dimension name="time" units="ISO8601"/>
         <Extent name="time">2025-01-01T00:00:00Z/2025-01-01T00:10:00Z/PT5M</Extent>
       </Layer>
+      <Layer>
+        <Name>daily</Name>
+        <BoundingBox SRS="EPSG:4326" minx="1" miny="2" maxx="3" maxy="4"/>
+        <Dimension name="time" units="ISO8601"/>
+        <Extent name="time">2025-01-01/2025-01-03/P1D</Extent>
+      </Layer>
     </Layer>
   </Capability>
 </WMS_Capabilities>
