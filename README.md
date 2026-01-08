@@ -38,13 +38,13 @@ Create a JSON file when you want to control the tile size, the resolution, or su
   "tile_height": 512,
   "resolution": 500.0,
   "bboxes": [
-    {"crs": "EPSG:3575", "minx": 85937.5, "miny": -3808593.75, "maxx": 167968.75, "maxy": -3726562.5}
+    {"crs": "EPSG:3575", "minx": -132072.7784, "miny": -3912803.2510, "maxx": 360255.4228, "maxy": -3547098.2575}
   ]
 }
 ```
 
 When both `resolution` and `bboxes` are omitted, a single tile is generated for each layer using the
-layer bounding box (or a fallback default).
+Denmark extent for EPSG:3575 layers (falling back to the layer bounding box when it doesn't cover Denmark).
 
 ## Development
 

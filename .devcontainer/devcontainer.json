@@ -15,7 +15,8 @@
         "python.testing.pytestEnabled": true
       },
       "extensions": [
-        "ms-python.python"
+        "ms-python.python",
+        "openai.chatgpt"
       ]
     }
   }

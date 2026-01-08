@@ -11,10 +11,10 @@ DEFAULT_TILE_WIDTH = 512
 DEFAULT_TILE_HEIGHT = 512
 DEFAULT_TILE_BBOX = BoundingBox(
     crs="EPSG:3575",
-    minx=85937.5,
-    miny=-3808593.75,
-    maxx=167968.75,
-    maxy=-3726562.5,
+    minx=-132072.7784,
+    miny=-3912803.2510,
+    maxx=360255.4228,
+    maxy=-3547098.2575,
 )
 
 
@@ -64,11 +64,29 @@ def load_tile_config(path: str | Path | None) -> TileConfig:
 def resolve_tiles(layer: LayerInfo, config: TileConfig) -> list[TileRequest]:
     if config.bboxes:
         return [TileRequest(bbox=bbox, width=config.tile_width, height=config.tile_height) for bbox in config.bboxes]
-    if config.resolution and layer.bbox:
-        return _generate_tiles(layer.bbox, config.tile_width, config.tile_height, config.resolution)
-    if layer.bbox:
-        return [TileRequest(bbox=layer.bbox, width=config.tile_width, height=config.tile_height)]
-    return [TileRequest(bbox=DEFAULT_TILE_BBOX, width=config.tile_width, height=config.tile_height)]
+    extent = _select_extent(layer.bbox)
+    if config.resolution:
+        return _generate_tiles(extent, config.tile_width, config.tile_height, config.resolution)
+    return [TileRequest(bbox=extent, width=config.tile_width, height=config.tile_height)]
+
+
+def _select_extent(layer_bbox: BoundingBox | None) -> BoundingBox:
+    if layer_bbox is None:
+        return DEFAULT_TILE_BBOX
+    if layer_bbox.crs.upper() != DEFAULT_TILE_BBOX.crs.upper():
+        return layer_bbox
+    if _contains_bbox(layer_bbox, DEFAULT_TILE_BBOX):
+        return DEFAULT_TILE_BBOX
+    return layer_bbox
+
+
+def _contains_bbox(outer: BoundingBox, inner: BoundingBox) -> bool:
+    return (
+        outer.minx <= inner.minx
+        and outer.miny <= inner.miny
+        and outer.maxx >= inner.maxx
+        and outer.maxy >= inner.maxy
+    )
 
 
 def _generate_tiles(
