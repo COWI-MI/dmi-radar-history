@@ -1,0 +1,62 @@
+name: Update radar tiles
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore existing site
+        run: |
+          git fetch origin gh-pages --depth=1 || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git worktree add site origin/gh-pages
+          else
+            mkdir -p site
+          fi
+
+      - name: Download latest tiles
+        run: python -m dmi_radar_history.downloader --output-dir data --max-age-hours 6
+
+      - name: Build daily stacks
+        run: python -m dmi_radar_history.stacker --input-dir data --output-dir site/daily
+
+      - name: Build viewer
+        run: python -m dmi_radar_history.viewer --stacked-dir site/daily --output-dir site --title "DMI Radar Daily Stack"
+
+      - name: Prepare Pages artifact
+        run: rm -f site/.git
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to Pages
+        uses: actions/deploy-pages@v4
