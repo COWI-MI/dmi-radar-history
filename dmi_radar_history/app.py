@@ -41,6 +41,16 @@ def _filter_recent(times: list[dt.datetime], max_age_hours: float | None) -> lis
     return [time for time in times if time >= cutoff]
 
 
+def _filter_layers(layers, requested_names: set[str]) -> list:
+    if not requested_names:
+        return list(layers)
+    requested_lower = {name.lower() for name in requested_names}
+    filtered = [layer for layer in layers if layer.name.lower() in requested_lower]
+    if not filtered:
+        LOGGER.warning("No matching layers found for %s", ", ".join(sorted(requested_names)))
+    return filtered
+
+
 def _process_layer(
     layer,
     base_url: str,
@@ -105,6 +115,11 @@ def main() -> int:
     parser.add_argument("--tile-config", default=None)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--max-age-hours", type=float, default=12.0)
+    parser.add_argument(
+        "--layers",
+        default="prectype",
+        help="Comma-separated layer names to download (default: prectype).",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
@@ -113,6 +128,8 @@ def main() -> int:
     capabilities_xml = fetch_capabilities(args.capabilities_url, timeout=args.timeout)
     layers = parse_capabilities(capabilities_xml)
     tile_config = load_tile_config(args.tile_config)
+    requested_names = {name.strip() for name in args.layers.split(",") if name.strip()}
+    layers = _filter_layers(layers, requested_names)
 
     output_dir = Path(args.output_dir)
     state_file = Path(args.state_file) if args.state_file else output_dir / "state.json"
