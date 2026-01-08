@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WMS_Capabilities>
+  <Capability>
+    <Layer>
+      <Layer>
+        <Name>prectype</Name>
+        <Title>Precip Type</Title>
+        <BoundingBox SRS="EPSG:3575" minx="0" miny="0" maxx="10" maxy="10"/>
+        <Dimension name="time" units="ISO8601"/>
+        <Extent name="time">2025-01-01T00:00:00Z,2025-01-01T00:05:00Z</Extent>
+      </Layer>
+      <Layer>
+        <Name>reflectivity</Name>
+        <BoundingBox SRS="EPSG:4326" minx="1" miny="2" maxx="3" maxy="4"/>
+        <Dimension name="time" units="ISO8601"/>
+        <Extent name="time">2025-01-01T00:00:00Z/2025-01-01T00:10:00Z/PT5M</Extent>
+      </Layer>
+      <Layer>
+        <Name>daily</Name>
+        <BoundingBox SRS="EPSG:4326" minx="1" miny="2" maxx="3" maxy="4"/>
+        <Dimension name="time" units="ISO8601"/>
+        <Extent name="time">2025-01-01/2025-01-03/P1D</Extent>
+      </Layer>
+    </Layer>
+  </Capability>
+</WMS_Capabilities>
