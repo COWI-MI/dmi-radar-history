@@ -1,0 +1,19 @@
+{
+  "name": "dmi-radar-history",
+  "image": "mcr.microsoft.com/devcontainers/python:3.14",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "postCreateCommand": "python -m pip install --upgrade pip pytest",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.testing.pytestEnabled": true
+      },
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
+  }
+}
