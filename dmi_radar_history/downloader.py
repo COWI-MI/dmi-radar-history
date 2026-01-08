@@ -25,7 +25,12 @@ def _download_tile(url: str, destination: Path, timeout: float) -> None:
         headers={"User-Agent": "dmi-radar-history/1.0"},
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
+        content_type = response.headers.get("Content-Type", "")
+        if not content_type.startswith("image/"):
+            raise ValueError(f"Unexpected content type for {url}: {content_type}")
         content = response.read()
+        if not content:
+            raise ValueError(f"Empty response for {url}")
     destination.write_bytes(content)
 
 
