@@ -65,8 +65,7 @@ def _parse_manifest_time(value: str) -> dt.datetime | None:
     return parsed.replace(tzinfo=dt.timezone.utc)
 
 
-def _load_existing_manifest(output_dir: Path) -> dict | None:
-    manifest_path = output_dir / "manifest.json"
+def _load_existing_manifest(manifest_path: Path) -> dict | None:
     if not manifest_path.exists():
         return None
     try:
@@ -166,9 +165,11 @@ def build_day_stacks(
     input_dir: Path,
     output_dir: Path,
     layers: set[str] | None = None,
+    existing_manifest_path: Path | None = None,
 ) -> dict:
     tiles = collect_day_tiles(input_dir, layers=layers)
-    existing_manifest = _filter_manifest_layers(_load_existing_manifest(output_dir), layers)
+    manifest_path = existing_manifest_path or output_dir / "manifest.json"
+    existing_manifest = _filter_manifest_layers(_load_existing_manifest(manifest_path), layers)
     existing_index = _index_existing_manifest(existing_manifest)
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = {
@@ -273,8 +274,13 @@ def main() -> int:
     output_dir = Path(args.output_dir)
     layers = {name.strip() for name in args.layers.split(",") if name.strip()} or None
 
-    manifest = build_day_stacks(input_dir, output_dir, layers=layers)
     manifest_path = Path(args.manifest) if args.manifest else output_dir / "manifest.json"
+    manifest = build_day_stacks(
+        input_dir,
+        output_dir,
+        layers=layers,
+        existing_manifest_path=manifest_path,
+    )
     write_manifest(manifest_path, manifest)
     LOGGER.info("Wrote manifest to %s", manifest_path)
     return 0
