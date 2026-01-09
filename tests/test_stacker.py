@@ -91,3 +91,23 @@ def test_build_day_stacks_filters_manifest_layers(tmp_path: Path) -> None:
     filtered = build_day_stacks(input_dir, output_dir, layers={"prectype"})
 
     assert [layer["name"] for layer in filtered["layers"]] == ["prectype"]
+
+
+def test_build_day_stacks_uses_explicit_manifest_path(tmp_path: Path) -> None:
+    input_dir = tmp_path / "data"
+    output_dir = tmp_path / "daily"
+    first_time = input_dir / "prectype" / "20250101T000000Z"
+    _write_tile(first_time / "tile_0_0_0_1_1.png", (0, 0), (255, 0, 0, 255))
+
+    manifest_path = tmp_path / "manifest.json"
+    manifest_first = build_day_stacks(input_dir, output_dir, existing_manifest_path=manifest_path)
+    write_manifest(manifest_path, manifest_first)
+
+    next_input = tmp_path / "next"
+    second_time = next_input / "prectype" / "20250102T000000Z"
+    _write_tile(second_time / "tile_0_0_0_1_1.png", (1, 1), (0, 0, 255, 255))
+
+    manifest = build_day_stacks(next_input, output_dir, existing_manifest_path=manifest_path)
+
+    day_dates = [day["date"] for day in manifest["layers"][0]["days"]]
+    assert day_dates == ["2025-01-01", "2025-01-02"]
