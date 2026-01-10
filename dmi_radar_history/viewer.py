@@ -249,12 +249,23 @@ def render_viewer_html(
 
       function loadDays(layer) {{
         daySelect.innerHTML = "";
-        layer.days.forEach((day) => {{
+        (layer.days || []).forEach((day, index) => {{
           const option = document.createElement("option");
-          option.value = day.date;
+          option.value = String(index);
           option.textContent = day.date;
           daySelect.appendChild(option);
         }});
+      }}
+
+      function getSelectedDay(layer) {{
+        if (!layer.days || layer.days.length === 0) {{
+          return null;
+        }}
+        const index = Number(daySelect.value);
+        if (!Number.isFinite(index) || index < 0 || index >= layer.days.length) {{
+          return layer.days[0];
+        }}
+        return layer.days[index];
       }}
 
       function renderTiles(layer, day) {{
@@ -295,7 +306,7 @@ def render_viewer_html(
           metaEl.innerHTML = "";
           return;
         }}
-        const day = layer.days.find((item) => item.date === daySelect.value);
+        const day = getSelectedDay(layer);
         renderTiles(layer, day);
       }}
 
@@ -308,7 +319,7 @@ def render_viewer_html(
         const firstLayer = manifest.layers[0];
         loadDays(firstLayer);
         layerSelect.value = firstLayer.name;
-        daySelect.value = firstLayer.days[0]?.date || "";
+        daySelect.value = "0";
         render();
         layerSelect.addEventListener("change", () => {{
           const layer = manifest.layers.find((item) => item.name === layerSelect.value);
@@ -316,7 +327,7 @@ def render_viewer_html(
             return;
           }}
           loadDays(layer);
-          daySelect.value = layer.days[0]?.date || "";
+          daySelect.value = "0";
           render();
         }});
         daySelect.addEventListener("change", render);

@@ -32,6 +32,45 @@ def _sample_manifest() -> dict:
     }
 
 
+def _sample_manifest_multiple_days() -> dict:
+    return {
+        "generated_at": "2026-01-08T00:00:00Z",
+        "layers": [
+            {
+                "name": "prectype",
+                "days": [
+                    {
+                        "date": "2025-01-01",
+                        "times": ["2025-01-01T00:00:00Z"],
+                        "tiles": [
+                            {
+                                "index": 0,
+                                "path": "prectype/2025-01-01/tile_0.png",
+                                "width": 512,
+                                "height": 512,
+                                "count": 1,
+                            }
+                        ],
+                    },
+                    {
+                        "date": "2025-01-02",
+                        "times": ["2025-01-02T00:00:00Z"],
+                        "tiles": [
+                            {
+                                "index": 0,
+                                "path": "prectype/2025-01-02/tile_0.png",
+                                "width": 512,
+                                "height": 512,
+                                "count": 1,
+                            }
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+
 def test_render_viewer_html_embeds_manifest() -> None:
     html = viewer.render_viewer_html(_sample_manifest(), title="Test Viewer", tile_base_path="daily")
     assert "Test Viewer" in html
@@ -39,6 +78,14 @@ def test_render_viewer_html_embeds_manifest() -> None:
     assert "prectype" in html
     assert "tile_0.png" in html
     assert "daily/" in html
+
+
+def test_render_viewer_html_supports_multiple_days() -> None:
+    html = viewer.render_viewer_html(_sample_manifest_multiple_days(), title="Test Viewer", tile_base_path="daily")
+    assert "2025-01-01" in html
+    assert "2025-01-02" in html
+    assert "option.value = String(index)" in html
+    assert "const day = getSelectedDay(layer);" in html
 
 
 def test_write_viewer_creates_file(tmp_path: Path) -> None:

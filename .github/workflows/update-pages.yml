@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -33,12 +34,18 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Restore existing site
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: update-pages.yml
+          name: github-pages
+          path: site-artifact
+          if_no_artifact_found: ignore
+
+      - name: Extract existing site
         run: |
-          git fetch origin gh-pages --depth=1 || true
-          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
-            git worktree add site origin/gh-pages
-          else
-            mkdir -p site
+          mkdir -p site
+          if [ -f site-artifact/artifact.tar ]; then
+            tar -xf site-artifact/artifact.tar -C site
           fi
 
       - name: Download latest tiles
@@ -51,7 +58,7 @@ jobs:
         run: python -m dmi_radar_history.viewer --stacked-dir site/daily --output-dir site --title "DMI Radar Daily Stack" --tile-base-path "daily/"
 
       - name: Prepare Pages artifact
-        run: rm -f site/.git
+        run: rm -rf site-artifact
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
