@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import datetime as dt
 import logging
 from pathlib import Path
@@ -97,17 +98,22 @@ def _process_layer(
                 )
                 LOGGER.info("Would fetch %s", url)
             continue
-        for index, tile, target in missing_tiles:
-            url = build_getmap_url(
-                base_url=base_url,
-                layer=layer.name,
-                time_value=time_value,
-                bbox=tile.bbox,
-                width=tile.width,
-                height=tile.height,
-            )
-            LOGGER.info("Fetching %s", url)
-            _download_tile(url, target, timeout)
+        max_workers = min(8, len(missing_tiles))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for index, tile, target in missing_tiles:
+                url = build_getmap_url(
+                    base_url=base_url,
+                    layer=layer.name,
+                    time_value=time_value,
+                    bbox=tile.bbox,
+                    width=tile.width,
+                    height=tile.height,
+                )
+                LOGGER.info("Fetching %s", url)
+                futures.append(executor.submit(_download_tile, url, target, timeout))
+            for future in as_completed(futures):
+                future.result()
         state.update(layer.name, time_value)
 
 
