@@ -143,7 +143,7 @@ def _process_layer(
                     time_value.isoformat(),
                     len(failures),
                 )
-                continue
+                break
             state.update(layer.name, time_value)
     finally:
         if executor:
