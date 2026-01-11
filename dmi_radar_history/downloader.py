@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import datetime as dt
 import logging
 from pathlib import Path
+import tempfile
 import urllib.request
 
 from .state import State, load_state, save_state
@@ -32,7 +33,20 @@ def _download_tile(url: str, destination: Path, timeout: float) -> None:
         content = response.read()
         if not content:
             raise ValueError(f"Empty response for {url}")
-    destination.write_bytes(content)
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            dir=destination.parent,
+            prefix=f"{destination.stem}.",
+            suffix=f"{destination.suffix}.tmp",
+        ) as temp_file:
+            temp_file.write(content)
+            temp_path = Path(temp_file.name)
+        temp_path.replace(destination)
+    finally:
+        if temp_path and temp_path.exists():
+            temp_path.unlink(missing_ok=True)
 
 
 def _tile_filename(tile: TileRequest, index: int) -> str:
@@ -71,36 +85,38 @@ def _process_layer(
     times.sort()
     times = _filter_recent(times, max_age_hours)
     last_saved = state.latest_for(layer.name)
-    for time_value in times:
-        if last_saved and time_value <= last_saved:
-            continue
-        time_dir = output_dir / layer.name / time_value.strftime("%Y%m%dT%H%M%SZ")
-        _ensure_dir(time_dir)
-        missing_tiles: list[tuple[int, TileRequest, Path]] = []
-        for index, tile in enumerate(tile_requests):
-            filename = _tile_filename(tile, index)
-            target = time_dir / filename
-            if target.exists():
+    executor = None
+    if not dry_run:
+        executor = ThreadPoolExecutor(max_workers=8)
+    try:
+        for time_value in times:
+            if last_saved and time_value <= last_saved:
                 continue
-            missing_tiles.append((index, tile, target))
-        if not missing_tiles:
-            state.update(layer.name, time_value)
-            continue
-        if dry_run:
-            for index, tile, _target in missing_tiles:
-                url = build_getmap_url(
-                    base_url=base_url,
-                    layer=layer.name,
-                    time_value=time_value,
-                    bbox=tile.bbox,
-                    width=tile.width,
-                    height=tile.height,
-                )
-                LOGGER.info("Would fetch %s", url)
-            continue
-        max_workers = min(8, len(missing_tiles))
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = []
+            time_dir = output_dir / layer.name / time_value.strftime("%Y%m%dT%H%M%SZ")
+            _ensure_dir(time_dir)
+            missing_tiles: list[tuple[int, TileRequest, Path]] = []
+            for index, tile in enumerate(tile_requests):
+                filename = _tile_filename(tile, index)
+                target = time_dir / filename
+                if target.exists():
+                    continue
+                missing_tiles.append((index, tile, target))
+            if not missing_tiles:
+                state.update(layer.name, time_value)
+                continue
+            if dry_run:
+                for index, tile, _target in missing_tiles:
+                    url = build_getmap_url(
+                        base_url=base_url,
+                        layer=layer.name,
+                        time_value=time_value,
+                        bbox=tile.bbox,
+                        width=tile.width,
+                        height=tile.height,
+                    )
+                    LOGGER.info("Would fetch %s", url)
+                continue
+            futures = {}
             for index, tile, target in missing_tiles:
                 url = build_getmap_url(
                     base_url=base_url,
@@ -111,10 +127,27 @@ def _process_layer(
                     height=tile.height,
                 )
                 LOGGER.info("Fetching %s", url)
-                futures.append(executor.submit(_download_tile, url, target, timeout))
+                futures[executor.submit(_download_tile, url, target, timeout)] = (url, target)
+            failures = []
             for future in as_completed(futures):
-                future.result()
-        state.update(layer.name, time_value)
+                url, target = futures[future]
+                try:
+                    future.result()
+                except Exception:
+                    LOGGER.exception("Failed to fetch %s -> %s", url, target)
+                    failures.append(url)
+            if failures:
+                LOGGER.warning(
+                    "Skipping state update for %s at %s due to %d failed tiles.",
+                    layer.name,
+                    time_value.isoformat(),
+                    len(failures),
+                )
+                return
+            state.update(layer.name, time_value)
+    finally:
+        if executor:
+            executor.shutdown(wait=True)
 
 
 def main() -> int:
