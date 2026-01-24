@@ -111,3 +111,24 @@ def test_build_day_stacks_uses_explicit_manifest_path(tmp_path: Path) -> None:
 
     day_dates = [day["date"] for day in manifest["layers"][0]["days"]]
     assert day_dates == ["2025-01-01", "2025-01-02"]
+
+
+def test_build_day_stacks_limits_manifest_to_last_week(tmp_path: Path) -> None:
+    input_dir = tmp_path / "data"
+    output_dir = tmp_path / "daily"
+    for day in range(1, 9):
+        time_path = input_dir / "prectype" / f"202501{day:02d}T000000Z"
+        _write_tile(time_path / "tile_0_0_0_1_1.png", (0, 0), (255, 0, 0, 255))
+
+    manifest = build_day_stacks(input_dir, output_dir)
+
+    day_dates = [day["date"] for day in manifest["layers"][0]["days"]]
+    assert day_dates == [
+        "2025-01-02",
+        "2025-01-03",
+        "2025-01-04",
+        "2025-01-05",
+        "2025-01-06",
+        "2025-01-07",
+        "2025-01-08",
+    ]

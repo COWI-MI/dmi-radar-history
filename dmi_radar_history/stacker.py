@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, cast
 
 LOGGER = logging.getLogger(__name__)
+MAX_MANIFEST_DAYS = 7
 
 _TIME_DIR_RE = re.compile(r"^\d{8}T\d{6}Z$")
 _TILE_NAME_RE = re.compile(r"^tile_(\d+)_.*\.png$")
@@ -95,6 +96,15 @@ def _filter_manifest_layers(manifest: dict | None, layers: set[str] | None) -> d
     return {"generated_at": manifest.get("generated_at"), "layers": filtered_layers}
 
 
+def _trim_manifest_days(manifest: dict, max_days: int = MAX_MANIFEST_DAYS) -> dict:
+    for layer in manifest.get("layers", []):
+        days = sorted(layer.get("days", []), key=lambda item: item.get("date", ""))
+        if len(days) > max_days:
+            days = days[-max_days:]
+        layer["days"] = days
+    return manifest
+
+
 def _iter_layer_dirs(input_dir: Path, layers: set[str] | None) -> Iterable[Path]:
     for entry in sorted(input_dir.iterdir()):
         if not entry.is_dir():
@@ -178,8 +188,7 @@ def build_day_stacks(
     }
 
     if not tiles and existing_manifest:
-        manifest["layers"] = existing_manifest.get("layers", [])
-        return manifest
+        return _trim_manifest_days(existing_manifest)
     if not tiles:
         LOGGER.warning("No tiles discovered under %s", input_dir)
         return manifest
@@ -249,7 +258,7 @@ def build_day_stacks(
                 layer_entry["days"].append(day_entry)
         layer_entry["days"].sort(key=lambda item: item["date"])
         manifest["layers"].append(layer_entry)
-    return manifest
+    return _trim_manifest_days(manifest)
 
 
 def write_manifest(path: Path, manifest: dict) -> None:
